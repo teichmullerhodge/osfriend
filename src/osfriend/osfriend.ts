@@ -1,6 +1,10 @@
 import { spawnSync } from "bun";
 import os from "os";
 
+
+export const OS_FRIEND_AUDIO_SIGNATURE: string = "osfriend_record";
+
+
 export class OSFriend {
   static exec(command: string) {
     const platform = os.platform(); 

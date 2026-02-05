@@ -2,13 +2,14 @@ import OpenAI from "openai";
 import fs from "fs";
 import { spawn } from "child_process";
 import type { OSFriendResponse, RetryContext, UserContext, UserRequest } from "./osfriend/types";
-import { OSFriend } from "./osfriend/osfriend";
+import { OS_FRIEND_AUDIO_SIGNATURE, OSFriend } from "./osfriend/osfriend";
 import { Logger } from "./logger/logger";
 import os from "os";
 import { windowsContext } from "./platforms/windows";
 import { macContext } from "./platforms/mac";
 import { linuxContext } from "./platforms/linux";
 import { getAudioRecordCommand, initAudio, stopAudioProcess } from "./platforms/recording";
+import { cleanupTempAudios } from "./temp/clean";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
@@ -71,12 +72,15 @@ async function processRequest(userPrompt: string, systemPrompt: string, retry?: 
 }
 
 async function main(): Promise<number> {
+  
   if(!process.env.OPENAI_MODEL){
     throw new Error("OPENAI_MODEL env. variable should be set.");
   }
   if(!process.env.OPENAI_API_KEY){
     throw new Error("OPENAI_API_KEY env. variable should be set.");
   }
+
+  cleanupTempAudios(OS_FRIEND_AUDIO_SIGNATURE);
 
   const onWindows = os.platform() === "win32";
   const systemPromptFile = Bun.file("./prompts/v1.txt");
@@ -111,7 +115,7 @@ async function main(): Promise<number> {
     await initAudio(); // get the first audio device using ffmpeg or defined in the .env 
   }
 
-  const audioFile = onWindows ? `${process.cwd()}\\audio_${Date.now()}.wav` : `/tmp/audio_${Date.now()}.wav`;
+  const audioFile = onWindows ? `${process.cwd()}\\${OS_FRIEND_AUDIO_SIGNATURE}_${Date.now()}.mp3` : `/tmp/${OS_FRIEND_AUDIO_SIGNATURE}_${Date.now()}.mp3`;
 
   process.stdin.on('data', async (key: string) => {
     if (key === '\u0003') {

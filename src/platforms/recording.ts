@@ -28,28 +28,53 @@ export function getFirstAudioDevice(): Promise<string | null> {
   });
 }
 
+
+
 export function getAudioRecordCommand(outputFile: string): { cmd: string; args: string[] } {
   const platform = os.platform();
-  
+
+
+  const commonArgs = [
+    "-t", process.env.MAX_RECORDING_TIME_S || "60",          
+    "-ac", "1",       
+    "-ar", "16000",     
+    "-c:a", "libmp3lame",
+    "-y",               
+    outputFile
+  ];
+
   if (platform === "win32") {
     return {
       cmd: "ffmpeg",
-      args: ["-f", "dshow", "-i", `audio=${AUDIO_DEVICE}`, outputFile]
+      args: [
+        "-f", "dshow",
+        "-i", `audio=${AUDIO_DEVICE}`,
+        ...commonArgs
+      ]
     };
   }
 
   if (platform === "darwin") {
     return {
       cmd: "ffmpeg",
-      args: ["-f", "avfoundation", "-i", ":0", outputFile]
+      args: [
+        "-f", "avfoundation",
+        "-i", ":0",
+        ...commonArgs
+      ]
     };
   }
 
   return {
-    cmd: "arecord",
-    args: ["-f", "cd", "-t", "wav", outputFile]
+    cmd: "ffmpeg",
+    args: [
+      "-f", "alsa",
+      "-i", "default",
+      ...commonArgs
+    ]
   };
 }
+
 
 export async function stopAudioProcess(audioProcess: unknown | any, onWindows: boolean) {
     if (onWindows) {
